@@ -32,14 +32,25 @@ function parseRecords() {
 
     return parsed
       .filter((item) => item && typeof item === "object")
-      .map((item) => ({
-        task: typeof item.task === "string" && item.task.trim() ? item.task.trim() : "未分類",
-        minutes: Number.isFinite(Number(item.minutes)) ? Math.max(0, Number(item.minutes)) : 0,
-        date: typeof item.date === "string" ? item.date : "",
-        startedAt: typeof item.startedAt === "string" ? item.startedAt : "",
-        endedAt: typeof item.endedAt === "string" ? item.endedAt : "",
-      }))
-      .filter((item) => item.date && item.minutes > 0);
+      .map((item) => {
+        const task = typeof item.task === "string" && item.task.trim() ? item.task.trim() : "未分類";
+        // Support both legacy `minutes` and new `seconds`.
+        let seconds = 0;
+        if (Number.isFinite(Number(item.seconds))) {
+          seconds = Math.max(0, Math.floor(Number(item.seconds)));
+        } else if (Number.isFinite(Number(item.minutes))) {
+          seconds = Math.max(0, Math.round(Number(item.minutes) * 60));
+        }
+
+        return {
+          task,
+          seconds,
+          date: typeof item.date === "string" ? item.date : "",
+          startedAt: typeof item.startedAt === "string" ? item.startedAt : "",
+          endedAt: typeof item.endedAt === "string" ? item.endedAt : "",
+        };
+      })
+      .filter((item) => item.date && item.seconds > 0);
   } catch {
     return [];
   }
@@ -98,6 +109,7 @@ function formatDateTime(value) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   }).format(date);
 }
 
@@ -112,23 +124,27 @@ function formatDateLabel(dateText) {
   }).format(date);
 }
 
-function formatElapsedMinutes(startedAt) {
+function formatElapsedSeconds(startedAt) {
   const started = new Date(startedAt).getTime();
-  if (Number.isNaN(started)) return "0分";
+  if (Number.isNaN(started)) return "0秒";
 
-  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - started) / 60000));
-  return formatMinutes(elapsedMinutes);
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - started) / 1000));
+  return formatDuration(elapsedSeconds);
 }
 
-function formatMinutes(totalMinutes) {
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  return `${hours}時間 ${mins}分`;
+function formatDuration(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}時間 ${mins}分 ${secs}秒`;
+  if (mins > 0) return `${mins}分 ${secs}秒`;
+  return `${secs}秒`;
 }
 
-function minutesByTask(records) {
+function secondsByTask(records) {
   return records.reduce((acc, item) => {
-    acc[item.task] = (acc[item.task] || 0) + item.minutes;
+    acc[item.task] = (acc[item.task] || 0) + (Number.isFinite(Number(item.seconds)) ? Number(item.seconds) : 0);
     return acc;
   }, {});
 }
@@ -161,7 +177,7 @@ function updateTimerState() {
     stopLiveTimer();
     sessionStatus.textContent = "未開始";
     activeTaskEl.textContent = "-";
-    activeDurationEl.textContent = "0分";
+    activeDurationEl.textContent = formatDuration(0);
     return;
   }
 
@@ -171,7 +187,7 @@ function updateTimerState() {
 
   sessionStatus.textContent = "記録中";
   activeTaskEl.textContent = activeSession.task;
-  activeDurationEl.textContent = formatElapsedMinutes(activeSession.startedAt);
+  activeDurationEl.textContent = formatElapsedSeconds(activeSession.startedAt);
 }
 
 function startLiveTimer() {
@@ -207,7 +223,7 @@ function renderRecordList(container, records, showDateGroup = false) {
               <p class="record-task">${record.task}</p>
               <p class="record-meta">${timeRange}</p>
             </div>
-            <p class="record-minutes">${formatMinutes(record.minutes)}</p>
+            <p class="record-minutes">${formatDuration(Number.isFinite(Number(record.seconds)) ? Number(record.seconds) : 0)}</p>
           </article>
         `;
       })
@@ -228,15 +244,15 @@ function renderRecordList(container, records, showDateGroup = false) {
   container.innerHTML = dates
     .map((date) => {
       const items = grouped[date]
-        .map((record) => {
-          const timeRange = record.startedAt && record.endedAt ? `${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(new Date(record.startedAt))} - ${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(new Date(record.endedAt))}` : "記録済み";
+          .map((record) => {
+            const timeRange = record.startedAt && record.endedAt ? `${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(record.startedAt))} - ${new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(record.endedAt))}` : "記録済み";
           return `
             <article class="record-item compact">
               <div>
                 <p class="record-task">${record.task}</p>
                 <p class="record-meta">${timeRange}</p>
               </div>
-              <p class="record-minutes">${formatMinutes(record.minutes)}</p>
+                <p class="record-minutes">${formatDuration(Number.isFinite(Number(record.seconds)) ? Number(record.seconds) : 0)}</p>
             </article>
           `;
         })
@@ -281,7 +297,8 @@ function refreshRecordLists(records) {
 
 function renderChart(taskMap) {
   const labels = Object.keys(taskMap);
-  const values = Object.values(taskMap);
+  // Chart shows minutes (with one decimal) for readability while data stored in seconds.
+  const values = Object.values(taskMap).map((s) => Number((s / 60).toFixed(1)));
   const colors = labels.map((_, index) => buildColor(index));
 
   if (taskChart) {
@@ -293,7 +310,7 @@ function renderChart(taskMap) {
     data: {
       labels,
       datasets: [
-        {
+          {
           label: "作業割合（分）",
           data: values,
           backgroundColor: colors,
@@ -311,14 +328,14 @@ function renderChart(taskMap) {
           position: "bottom",
         },
         tooltip: {
-          callbacks: {
-            label(context) {
-              const total = values.reduce((sum, value) => sum + value, 0);
-              const value = context.parsed;
-              const ratio = total ? Math.round((value / total) * 100) : 0;
-              return `${context.label}: ${value}分 (${ratio}%)`;
+            callbacks: {
+              label(context) {
+                const total = values.reduce((sum, value) => sum + value, 0);
+                const value = context.parsed;
+                const ratio = total ? Math.round((value / total) * 100) : 0;
+                return `${context.label}: ${value}分 (${ratio}%)`;
+              },
             },
-          },
         },
       },
       scales:
@@ -343,27 +360,27 @@ function refreshDashboard() {
   const todayText = todayAsText();
   const weekStartText = dateKey(weekStartDate());
 
-  let todayMinutes = 0;
-  let weekMinutes = 0;
+  let todaySeconds = 0;
+  let weekSeconds = 0;
   const weekRecords = [];
 
   for (const item of records) {
     if (item.date === todayText) {
-      todayMinutes += item.minutes;
+      todaySeconds += item.seconds;
     }
 
     if (item.date >= weekStartText && item.date <= todayText) {
-      weekMinutes += item.minutes;
+      weekSeconds += item.seconds;
       weekRecords.push(item);
     }
   }
 
-  todayTotalEl.textContent = formatMinutes(todayMinutes);
-  weekTotalEl.textContent = formatMinutes(weekMinutes);
+  todayTotalEl.textContent = formatDuration(todaySeconds);
+  weekTotalEl.textContent = formatDuration(weekSeconds);
 
   refreshRecordLists(records);
 
-  const taskMap = minutesByTask(weekRecords);
+  const taskMap = secondsByTask(weekRecords);
   const hasData = Object.keys(taskMap).length > 0;
 
   if (!hasData) {
@@ -414,10 +431,10 @@ function stopTracking() {
   }
 
   const endedAt = new Date();
-  const elapsedMinutes = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000));
+  const elapsedSeconds = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 1000));
   const record = {
     task: activeSession.task,
-    minutes: elapsedMinutes,
+    seconds: elapsedSeconds,
     date: dateKey(endedAt),
     startedAt: startedAt.toISOString(),
     endedAt: endedAt.toISOString(),
@@ -445,35 +462,35 @@ function seedSampleData() {
   const sample = [
     {
       task: "開発",
-      minutes: 130,
+      seconds: 130 * 60,
       date: format(now),
       startedAt: new Date(now.getTime() - 130 * 60000).toISOString(),
       endedAt: now.toISOString(),
     },
     {
       task: "学習",
-      minutes: 80,
+      seconds: 80 * 60,
       date: format(now),
       startedAt: new Date(now.getTime() - 200 * 60000).toISOString(),
       endedAt: new Date(now.getTime() - 120 * 60000).toISOString(),
     },
     {
       task: "運動",
-      minutes: 45,
+      seconds: 45 * 60,
       date: format(new Date(now.getTime() - 86400000)),
       startedAt: new Date(now.getTime() - 86400000 - 45 * 60000).toISOString(),
       endedAt: new Date(now.getTime() - 86400000).toISOString(),
     },
     {
       task: "読書",
-      minutes: 60,
+      seconds: 60 * 60,
       date: format(new Date(now.getTime() - 86400000 * 2)),
       startedAt: new Date(now.getTime() - 86400000 * 2 - 60 * 60000).toISOString(),
       endedAt: new Date(now.getTime() - 86400000 * 2).toISOString(),
     },
     {
       task: "開発",
-      minutes: 95,
+      seconds: 95 * 60,
       date: format(new Date(now.getTime() - 86400000 * 3)),
       startedAt: new Date(now.getTime() - 86400000 * 3 - 95 * 60000).toISOString(),
       endedAt: new Date(now.getTime() - 86400000 * 3).toISOString(),
