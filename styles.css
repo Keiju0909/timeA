@@ -92,6 +92,189 @@ h1 {
   gap: 14px;
 }
 
+.tracker-card {
+  display: grid;
+  gap: 18px;
+  animation-delay: 0.05s;
+}
+
+.tracker-header,
+.record-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tracker-note,
+.record-count,
+.session-status,
+.active-label,
+.record-meta {
+  margin: 0;
+  color: var(--muted);
+}
+
+.session-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f0e5d4;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tracker-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px 16px;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input:focus {
+  border-color: var(--accent-alt);
+  box-shadow: 0 0 0 4px rgba(20, 108, 148, 0.14);
+}
+
+.tracker-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.start-btn,
+.stop-btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 110px;
+}
+
+.start-btn {
+  background: linear-gradient(135deg, var(--accent-alt), #2a8cbf);
+  color: #fff;
+}
+
+.stop-btn {
+  background: linear-gradient(135deg, #ab5032, #d8744e);
+  color: #fff;
+}
+
+.start-btn:disabled,
+.stop-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.active-session {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(20, 108, 148, 0.1), rgba(200, 76, 42, 0.08));
+  border: 1px solid #eadfcf;
+}
+
+.active-task {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.active-duration {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.record-card {
+  display: grid;
+  gap: 14px;
+  animation-delay: 0.12s;
+}
+
+.record-list,
+.record-group-list {
+  display: grid;
+  gap: 10px;
+}
+
+.record-group {
+  display: grid;
+  gap: 10px;
+}
+
+.record-group h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  color: var(--accent-alt);
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fffdf8;
+}
+
+.record-item.compact {
+  background: #fff;
+}
+
+.record-task {
+  margin: 0;
+  font-weight: 800;
+}
+
+.record-meta {
+  font-size: 0.9rem;
+}
+
+.record-minutes {
+  margin: 0;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--muted);
+}
+
 .card {
   border-radius: 22px;
   border: 1px solid var(--line);
@@ -204,6 +387,20 @@ pre {
 
   .cards {
     grid-template-columns: 1fr;
+  }
+
+  .tracker-form,
+  .record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracker-actions {
+    width: 100%;
+  }
+
+  .start-btn,
+  .stop-btn {
+    flex: 1;
   }
 
   .chart-wrap {
