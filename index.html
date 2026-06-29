@@ -37,13 +37,19 @@
         <div class="tracker-form">
           <label class="field">
             <span>タスク名</span>
-            <input id="taskInput" type="text" placeholder="例: 開発、学習、運動" maxlength="40" />
+            <input id="taskInput" type="text" list="taskHistoryList" placeholder="例: 開発、学習、運動" maxlength="40" />
+            <datalist id="taskHistoryList"></datalist>
           </label>
 
           <div class="tracker-actions">
             <button id="startBtn" class="start-btn" type="button">作業開始</button>
             <button id="stopBtn" class="stop-btn" type="button" disabled>停止</button>
           </div>
+        </div>
+
+        <div class="task-history" aria-label="タスク履歴">
+          <p class="task-history-label">履歴から選択</p>
+          <div id="taskHistoryChips" class="task-history-chips"></div>
         </div>
 
         <div class="active-session" aria-live="polite">
