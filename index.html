@@ -25,6 +25,34 @@
         </p>
       </header>
 
+      <section class="card tracker-card" aria-label="タイムトラッキング">
+        <div class="tracker-header">
+          <div>
+            <h2>タイムトラッキング</h2>
+            <p class="tracker-note">タスク名を入力して、作業開始と停止を切り替えます。</p>
+          </div>
+          <p id="sessionStatus" class="session-status">未開始</p>
+        </div>
+
+        <div class="tracker-form">
+          <label class="field">
+            <span>タスク名</span>
+            <input id="taskInput" type="text" placeholder="例: 開発、学習、運動" maxlength="40" />
+          </label>
+
+          <div class="tracker-actions">
+            <button id="startBtn" class="start-btn" type="button">作業開始</button>
+            <button id="stopBtn" class="stop-btn" type="button" disabled>停止</button>
+          </div>
+        </div>
+
+        <div class="active-session" aria-live="polite">
+          <p class="active-label">現在の作業</p>
+          <p id="activeTask" class="active-task">-</p>
+          <p id="activeDuration" class="active-duration">0分</p>
+        </div>
+      </section>
+
       <section class="cards" aria-label="集計カード">
         <article class="card metric">
           <h2>今日の合計作業時間</h2>
@@ -33,6 +61,24 @@
         <article class="card metric">
           <h2>週間合計</h2>
           <p id="weekTotal" class="metric-value">0時間 0分</p>
+        </article>
+      </section>
+
+      <section class="record-grid" aria-label="記録一覧">
+        <article class="card record-card">
+          <div class="record-head">
+            <h2>今日の記録</h2>
+            <p id="todayCount" class="record-count">0件</p>
+          </div>
+          <div id="todayRecords" class="record-list"></div>
+        </article>
+
+        <article class="card record-card">
+          <div class="record-head">
+            <h2>今週の記録</h2>
+            <p id="weekCount" class="record-count">0件</p>
+          </div>
+          <div id="weekRecords" class="record-list"></div>
         </article>
       </section>
 
