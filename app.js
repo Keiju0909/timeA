@@ -1,5 +1,7 @@
 const STORAGE_KEY = "timeARecords";
 const ACTIVE_SESSION_KEY = "timeAActiveSession";
+const TASK_HISTORY_KEY = "timeATaskHistory";
+const MAX_TASK_HISTORY = 12;
 
 const todayTotalEl = document.getElementById("todayTotal");
 const weekTotalEl = document.getElementById("weekTotal");
@@ -8,6 +10,8 @@ const barBtn = document.getElementById("barBtn");
 const seedBtn = document.getElementById("seedBtn");
 const chartCanvas = document.getElementById("taskChart");
 const taskInput = document.getElementById("taskInput");
+const taskHistoryList = document.getElementById("taskHistoryList");
+const taskHistoryChips = document.getElementById("taskHistoryChips");
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionStatus = document.getElementById("sessionStatus");
@@ -72,6 +76,102 @@ function parseActiveSession() {
     return { task, startedAt };
   } catch {
     return null;
+  }
+}
+
+function parseTaskHistory() {
+  const raw = localStorage.getItem(TASK_HISTORY_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const unique = new Set();
+    return parsed
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((task) => {
+        if (!task || unique.has(task)) return false;
+        unique.add(task);
+        return true;
+      })
+      .slice(0, MAX_TASK_HISTORY);
+  } catch {
+    return [];
+  }
+}
+
+function saveTaskHistory(history) {
+  localStorage.setItem(TASK_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_TASK_HISTORY)));
+}
+
+function buildHistoryFromRecords(records) {
+  const sorted = [...records].sort((left, right) => {
+    const leftTime = new Date(left.endedAt || left.startedAt || `${left.date}T00:00:00`).getTime();
+    const rightTime = new Date(right.endedAt || right.startedAt || `${right.date}T00:00:00`).getTime();
+    return rightTime - leftTime;
+  });
+
+  const unique = new Set();
+  const history = [];
+  for (const record of sorted) {
+    if (!record.task || unique.has(record.task)) continue;
+    unique.add(record.task);
+    history.push(record.task);
+    if (history.length >= MAX_TASK_HISTORY) break;
+  }
+
+  return history;
+}
+
+function ensureTaskHistorySeeded() {
+  const existingHistory = parseTaskHistory();
+  if (existingHistory.length > 0) return;
+
+  const records = parseRecords();
+  const fromRecords = buildHistoryFromRecords(records);
+  if (fromRecords.length > 0) {
+    saveTaskHistory(fromRecords);
+  }
+}
+
+function addTaskToHistory(task) {
+  const name = typeof task === "string" ? task.trim() : "";
+  if (!name) return;
+
+  const history = parseTaskHistory().filter((item) => item !== name);
+  history.unshift(name);
+  saveTaskHistory(history);
+  renderTaskHistory();
+}
+
+function renderTaskHistory() {
+  const history = parseTaskHistory();
+
+  taskHistoryList.textContent = "";
+  for (const task of history) {
+    const option = document.createElement("option");
+    option.value = task;
+    taskHistoryList.append(option);
+  }
+
+  if (!history.length) {
+    taskHistoryChips.textContent = "";
+    const empty = document.createElement("p");
+    empty.className = "history-empty";
+    empty.textContent = "履歴はまだありません。";
+    taskHistoryChips.append(empty);
+    return;
+  }
+
+  taskHistoryChips.textContent = "";
+  for (const task of history) {
+    const button = document.createElement("button");
+    button.className = "history-chip";
+    button.type = "button";
+    button.dataset.task = task;
+    button.textContent = task;
+    taskHistoryChips.append(button);
   }
 }
 
@@ -406,6 +506,8 @@ function startTracking() {
     return;
   }
 
+  addTaskToHistory(task);
+
   localStorage.setItem(
     ACTIVE_SESSION_KEY,
     JSON.stringify({
@@ -498,6 +600,8 @@ function seedSampleData() {
   ];
 
   saveRecords(sample);
+  ensureTaskHistorySeeded();
+  renderTaskHistory();
   refreshDashboard();
   updateTimerState();
 }
@@ -507,6 +611,22 @@ barBtn.addEventListener("click", () => setChartType("bar"));
 seedBtn.addEventListener("click", seedSampleData);
 startBtn.addEventListener("click", startTracking);
 stopBtn.addEventListener("click", stopTracking);
+taskHistoryChips.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const button = target.closest(".history-chip");
+  if (!(button instanceof HTMLElement)) return;
+
+  const selectedTask = button.dataset.task || "";
+  if (!selectedTask) return;
+
+  taskInput.value = selectedTask;
+  taskInput.focus();
+});
+
+ensureTaskHistorySeeded();
+renderTaskHistory();
 
 updateTimerState();
 
